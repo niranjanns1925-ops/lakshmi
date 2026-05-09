@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Role Lookup Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isCustomer() {
+      return isSignedIn() && getUserRole() == 'customer';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (getUserRole() == 'admin' || getUserRole() == 'superadmin');
+    }
+    
+    function isSuperAdmin() {
+      return isSignedIn() && getUserRole() == 'superadmin';
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // Users can read own profile; Admins can read all profiles
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      
+      // Auto-create: users can create their own doc during auth
+      // BUT they cannot set their own role to 'admin' or 'superadmin' via client
+      allow create: if isSignedIn() && request.auth.uid == userId && 
+                       (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'customer');
+                       
+      // Super admins can update roles, users can update profile info
+      allow update: if (isSuperAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])) || 
+                       (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+    }
+
+    // Services Collection
+    match /services/{serviceId} {
+      // Anyone signed in can view services
+      allow read: if isSignedIn();
+      // Only admins can create/update/delete services
+      allow write: if isAdmin();
+    }
+
+    // Applications Collection
+    match /applications/{applicationId} {
+      // Customers can read own applications, Admins can read all
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Customers can create applications linked to their ID
+      allow create: if isCustomer() && request.resource.data.userId == request.auth.uid;
+      
+      // Only Admins can update applications (e.g. status changes, adminNotes)
+      // Exception: Customers might need to update to add missing docs if rejected.
+      allow update: if isAdmin() || (request.auth.uid == resource.data.userId && resource.data.status == 'Rejected' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['documents', 'status']));
+      
+      allow delete: if isAdmin();
+    }
+
+    // Payments Collection
+    match /payments/{paymentId} {
+      // Customer can read own proof, Admins can read all
+      allow read: if isSignedIn() && (get(/databases/$(database)/documents/applications/$(resource.data.applicationId)).data.userId == request.auth.uid || isAdmin());
+      
+      // Customer can create payment proof
+      allow create: if isCustomer();
+      // Admin verifies
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+  }
+}

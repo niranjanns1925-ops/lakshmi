@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  :root {
+    /* Soft Pastel Light Theme (Palpachi style) */
+    --background: #fdfbf7;
+    --foreground: #2d3748;
+    
+    --card: rgba(255, 255, 255, 0.7);
+    --card-foreground: #2d3748;
+    
+    --primary: #a1c4fd; /* Soft blue */
+    --primary-foreground: #1a365d;
+    
+    --secondary: #ffecd2; /* Soft peach */
+    --secondary-foreground: #5c3a21;
+    
+    --accent: #c2e9fb; /* Soft cyan */
+    --accent-foreground: #003e5c;
+
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+
+    --border: rgba(255, 255, 255, 0.5);
+    --radius: 1rem;
+
+    --glass-bg: rgba(255, 255, 255, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  }
+
+  .dark {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    
+    --card: rgba(30, 41, 59, 0.7);
+    --card-foreground: #f8fafc;
+    
+    --primary: #3b82f6; 
+    --primary-foreground: #ffffff;
+    
+    --secondary: #fcd34d; 
+    --secondary-foreground: #451a03;
+    
+    --accent: #0ea5e9; 
+    --accent-foreground: #ffffff;
+
+    --muted: #334155;
+    --muted-foreground: #94a3b8;
+
+    --border: rgba(255, 255, 255, 0.1);
+
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground tracking-tight transition-colors duration-300;
+    /* Soft mesh gradient background */
+    background-image: 
+      radial-gradient(at 40% 20%, hsla(213,80%,85%,0.4) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(38,90%,85%,0.4) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(190,80%,85%,0.4) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+  
+  .dark body {
+    background-image: 
+      radial-gradient(at 40% 20%, hsla(213,80%,15%,0.6) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(38,90%,15%,0.6) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(190,80%,15%,0.6) 0px, transparent 50%);
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+}
