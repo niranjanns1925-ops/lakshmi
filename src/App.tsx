@@ -10,6 +10,8 @@ import ApplyService from './pages/customer/ApplyService';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminApplications from './pages/admin/AdminApplications';
 
+import AdminStaff from './pages/admin/AdminStaff';
+
 // Dummy components for missing routes to prevent errors
 const DummyPage = ({ title }: { title: string }) => <div className="p-8"><h1>{title}</h1><p>Under construction based on real-time data.</p></div>;
 
@@ -59,7 +61,7 @@ const MainRoutes = () => {
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="applications" element={<AdminApplications />} />
                 <Route path="services" element={<DummyPage title="Manage Services" />} />
-                <Route path="staff" element={<DummyPage title="Staff Management" />} />
+                <Route path="staff" element={<AdminStaff />} />
                 <Route path="settings" element={<DummyPage title="Settings" />} />
                 <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
               </Routes>

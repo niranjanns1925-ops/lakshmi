@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ShieldCheck, FileText, Clock, ArrowRight, Activity, Users, Settings } from 'lucide-react';
+import { FileText, Clock, ArrowRight, Activity, Users, Settings } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import Logo from '../components/Logo';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -31,8 +32,8 @@ export default function LandingPage() {
       {/* Header */}
       <header className="absolute top-0 inset-x-0 h-20 glass border-b border-border/50 z-50 px-6 lg:px-12 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-tr from-primary to-accent rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-            <ShieldCheck size={20} className="text-primary-foreground" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+            <Logo className="w-12 h-12" />
           </div>
           <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground">
             E-Sevai Smart
@@ -126,8 +127,8 @@ export default function LandingPage() {
               transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
               className="absolute -bottom-10 -left-10 glass p-5 rounded-2xl border border-white/40 shadow-xl"
             >
-              <ShieldCheck className="text-emerald-500" size={32} />
-              <div className="mt-2 text-xs font-semibold">Secured 🔒</div>
+              <Logo className="w-8 h-8" />
+              <div className="mt-2 text-xs font-semibold">Eco-Friendly 🌱</div>
             </motion.div>
           </motion.div>
         </div>

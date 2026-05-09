@@ -52,19 +52,31 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           
           if (docSnap.exists()) {
             const data = docSnap.data();
+            let userRole = data.role || 'customer';
+            
+            // Promote to superadmin if matching email
+            if (firebaseUser.email === 'niranjanns1925@gmail.com' && userRole !== 'superadmin') {
+              userRole = 'superadmin';
+              await setDoc(docRef, { role: 'superadmin' }, { merge: true });
+            }
+
             setUser({
               uid: firebaseUser.uid,
               name: data.name || firebaseUser.displayName || 'User',
               email: firebaseUser.email || '',
-              role: data.role || 'customer'
+              role: userRole
             });
           } else {
             // Auto-create customer profile on first sign in (e.g. via Google)
+            let userRole: UserRole = 'customer';
+            if (firebaseUser.email === 'niranjanns1925@gmail.com') {
+              userRole = 'superadmin';
+            }
             const newUser: AppUser = {
               uid: firebaseUser.uid,
               name: firebaseUser.displayName || 'User',
               email: firebaseUser.email || '',
-              role: 'customer' // Defaults to customer
+              role: userRole
             };
             await setDoc(docRef, newUser);
             setUser(newUser);
@@ -104,11 +116,15 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
       // Create user doc
+      let role: UserRole = 'customer';
+      if (email === 'niranjanns1925@gmail.com') {
+        role = 'superadmin';
+      }
       await setDoc(doc(db, 'users', res.user.uid), {
         uid: res.user.uid,
         name,
         email,
-        role: 'customer'
+        role
       });
     } catch (error) {
       console.error("Email register error", error);

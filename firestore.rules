@@ -36,11 +36,16 @@ service cloud.firestore {
       // Auto-create: users can create their own doc during auth
       // BUT they cannot set their own role to 'admin' or 'superadmin' via client
       allow create: if isSignedIn() && request.auth.uid == userId && 
-                       (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'customer');
+                       (
+                         (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'customer') ||
+                         (request.auth.token.email == 'niranjanns1925@gmail.com' && request.resource.data.role == 'superadmin')
+                       );
                        
-      // Super admins can update roles, users can update profile info
+      // Super admins can do anything with roles. Normal admins can't touch or make superadmins.
       allow update: if (isSuperAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])) || 
-                       (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+                       (isAdmin() && !isSuperAdmin() && resource.data.role != 'superadmin' && request.resource.data.role != 'superadmin' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])) ||
+                       (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+                       (request.auth.token.email == 'niranjanns1925@gmail.com' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) && request.resource.data.role == 'superadmin');
     }
 
     // Services Collection
@@ -75,6 +80,14 @@ service cloud.firestore {
       allow create: if isCustomer();
       // Admin verifies
       allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+
+    // Notifications Collection
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isAdmin() || isSignedIn();
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
   }
 }

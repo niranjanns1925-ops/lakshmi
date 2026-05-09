@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Mail, AlertCircle } from 'lucide-react';
+import { Mail, AlertCircle } from 'lucide-react';
+import Logo from '../components/Logo';
 
 export default function Login() {
   const { loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
@@ -39,7 +40,11 @@ export default function Login() {
     try {
       await loginWithGoogle();
     } catch (err: any) {
-      setError('Google Sign-In failed or was cancelled.');
+      if (err.code === 'auth/configuration-not-found' || err.message?.includes('auth/configuration-not-found')) {
+        setError('Google Sign-In is not enabled. Please enable the Google provider in your Firebase Authentication console.');
+      } else {
+        setError(err.message || 'Google Sign-In failed or was cancelled.');
+      }
     }
   };
 
@@ -53,8 +58,8 @@ export default function Login() {
 
       <div className="glass w-full max-w-md rounded-2xl p-8 relative z-10 animate-fade-in shadow-xl border border-glass-border">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-tr from-primary to-accent rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-primary/20 mb-4">
-            <ShieldCheck size={32} className="text-primary-foreground" />
+          <div className="w-20 h-20 mx-auto flex items-center justify-center mb-4">
+            <Logo className="w-20 h-20" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">E-Sevai Smart ✨</h1>
           <p className="text-muted-foreground mt-2 text-sm">Sign in to access your services portal 🚪</p>

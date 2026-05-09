@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, Home, FileText, Settings, CreditCard, LayoutDashboard, Menu, X, Users, Activity, Bell, Sun, Moon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { collection, query, where, onSnapshot, writeBatch, doc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import Logo from '../Logo';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -13,6 +16,36 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || user.role === 'superadmin') return; 
+
+    // Listen to real-time notifications for the current user
+    const q = query(collection(db, 'notifications'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      notifs.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter(n => !n.read).length);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const markAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    const batch = writeBatch(db);
+    notifications.filter(n => !n.read).forEach(n => {
+      batch.update(doc(db, 'notifications', n.id), { read: true });
+    });
+    await batch.commit();
+  };
 
   if (!user) {
     return <div className="min-h-screen bg-background">{children}</div>;
@@ -27,7 +60,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { name: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Applications', path: '/admin/applications', icon: FileText },
     { name: 'Services', path: '/admin/services', icon: Activity },
-    ...(user.role === 'superadmin' ? [{ name: 'Staff', path: '/admin/staff', icon: Users }] : []),
+    ...(user.role === 'superadmin' || user.role === 'admin' ? [{ name: 'Staff', path: '/admin/staff', icon: Users }] : []),
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
@@ -61,9 +94,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         )}
       >
         <div className="p-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-accent-foreground">
-            E-Sevai Smart
-          </h1>
+          <div className="flex items-center gap-2">
+            <Logo className="w-8 h-8" />
+            <h1 className="text-xl font-bold text-foreground">
+              Smart Portal
+            </h1>
+          </div>
           <button className="lg:hidden text-muted-foreground" onClick={() => setSidebarOpen(false)}>
             <X size={20} />
           </button>
@@ -137,7 +173,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 className="p-2 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors relative"
               >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background animate-pulse"></span>
+                )}
               </button>
 
               <AnimatePresence>
@@ -150,27 +188,31 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   >
                     <div className="p-4 border-b border-border/50 font-semibold flex justify-between items-center bg-background/50">
                       Notifications
-                      <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">2 New</span>
+                      {unreadCount > 0 && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">{unreadCount} New</span>}
                     </div>
                     <div className="max-h-[300px] overflow-y-auto">
-                      {[
-                        { title: 'Application Approved', desc: 'Your Income Certificate application has been approved.', time: '2m ago', unread: true },
-                        { title: 'Payment Successful', desc: 'Fee for Nativity Certificate received.', time: '1h ago', unread: true },
-                        { title: 'Status Update', desc: 'Community Certificate is now Processing.', time: '1d ago', unread: false },
-                      ].map((item, i) => (
-                        <div key={i} className={cn("p-4 border-b border-border/10 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors", item.unread && "bg-primary/5")}>
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="text-sm font-semibold text-foreground">{item.title}</span>
-                            {item.unread && <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5"></span>}
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No recent notifications</div>
+                      ) : (
+                        notifications.map((item) => (
+                          <div key={item.id} className={cn("p-4 border-b border-border/10 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors", !item.read && "bg-primary/5")}>
+                            <div className="flex justify-between items-start mb-1">
+                              <span className={cn("text-sm text-foreground", !item.read ? "font-bold" : "font-medium")}>{item.title}</span>
+                              {!item.read && <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5"></span>}
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-snug">{item.desc}</p>
+                            <span className="text-[10px] text-muted-foreground/70 mt-1 block">
+                              {item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
+                            </span>
                           </div>
-                          <p className="text-xs text-muted-foreground leading-snug">{item.desc}</p>
-                          <span className="text-[10px] text-muted-foreground/70 mt-1 block">{item.time}</span>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
-                    <div className="p-3 text-center text-xs font-medium text-primary hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer bg-background/50 transition-colors">
-                      Mark all as read
-                    </div>
+                    {unreadCount > 0 && (
+                      <div onClick={markAllAsRead} className="p-3 text-center text-xs font-medium text-primary hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer bg-background/50 transition-colors">
+                        Mark all as read
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

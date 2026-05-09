@@ -21,55 +21,55 @@
 
 @layer base {
   :root {
-    /* Soft Pastel Light Theme (Palpachi style) */
-    --background: #fdfbf7;
-    --foreground: #2d3748;
+    /* Light Milk Green Theme */
+    --background: #f4fbf6;
+    --foreground: #1c2b21;
     
     --card: rgba(255, 255, 255, 0.7);
-    --card-foreground: #2d3748;
+    --card-foreground: #1c2b21;
     
-    --primary: #a1c4fd; /* Soft blue */
-    --primary-foreground: #1a365d;
+    --primary: #9cdcab; /* Light milk green */
+    --primary-foreground: #0e3016;
     
-    --secondary: #ffecd2; /* Soft peach */
-    --secondary-foreground: #5c3a21;
+    --secondary: #d6f2df; /* Paler milk green */
+    --secondary-foreground: #133a21;
     
-    --accent: #c2e9fb; /* Soft cyan */
-    --accent-foreground: #003e5c;
+    --accent: #bce5c6; /* Soft green accent */
+    --accent-foreground: #0c331a;
 
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
+    --muted: #e6f4ea;
+    --muted-foreground: #5a7a67;
 
-    --border: rgba(255, 255, 255, 0.5);
+    --border: rgba(255, 255, 255, 0.6);
     --radius: 1rem;
 
     --glass-bg: rgba(255, 255, 255, 0.4);
     --glass-border: rgba(255, 255, 255, 0.6);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --glass-shadow: 0 8px 32px 0 rgba(74, 135, 96, 0.07);
   }
 
   .dark {
-    --background: #0f172a;
-    --foreground: #f8fafc;
+    --background: #09120c;
+    --foreground: #f0fdf4;
     
-    --card: rgba(30, 41, 59, 0.7);
-    --card-foreground: #f8fafc;
+    --card: rgba(15, 31, 20, 0.7);
+    --card-foreground: #f0fdf4;
     
-    --primary: #3b82f6; 
-    --primary-foreground: #ffffff;
+    --primary: #4ade80; 
+    --primary-foreground: #052e16;
     
-    --secondary: #fcd34d; 
-    --secondary-foreground: #451a03;
+    --secondary: #86efac; 
+    --secondary-foreground: #022c22;
     
-    --accent: #0ea5e9; 
-    --accent-foreground: #ffffff;
+    --accent: #6ee7b7; 
+    --accent-foreground: #022c22;
 
-    --muted: #334155;
-    --muted-foreground: #94a3b8;
+    --muted: #1c2b21;
+    --muted-foreground: #8aa393;
 
     --border: rgba(255, 255, 255, 0.1);
 
-    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-bg: rgba(9, 18, 12, 0.6);
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
@@ -78,19 +78,19 @@
 @layer base {
   body {
     @apply bg-background text-foreground tracking-tight transition-colors duration-300;
-    /* Soft mesh gradient background */
+    /* Soft milk green mesh gradient background */
     background-image: 
-      radial-gradient(at 40% 20%, hsla(213,80%,85%,0.4) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsla(38,90%,85%,0.4) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, hsla(190,80%,85%,0.4) 0px, transparent 50%);
+      radial-gradient(at 40% 20%, hsla(140,50%,88%,0.5) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(120,60%,92%,0.5) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(160,50%,85%,0.5) 0px, transparent 50%);
     background-attachment: fixed;
   }
   
   .dark body {
     background-image: 
-      radial-gradient(at 40% 20%, hsla(213,80%,15%,0.6) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsla(38,90%,15%,0.6) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, hsla(190,80%,15%,0.6) 0px, transparent 50%);
+      radial-gradient(at 40% 20%, hsla(140,50%,15%,0.6) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(120,60%,15%,0.6) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(160,50%,15%,0.6) 0px, transparent 50%);
   }
 }
 

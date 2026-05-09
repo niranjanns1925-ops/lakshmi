@@ -7,9 +7,10 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'Approved': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+    case 'Completed': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
     case 'Processing': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
     case 'Under Review': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+    case 'Submitted': return 'text-purple-500 bg-purple-500/10 border-purple-500/20';
     case 'Rejected': return 'text-red-500 bg-red-500/10 border-red-500/20';
     default: return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
   }
@@ -17,7 +18,7 @@ const getStatusColor = (status: string) => {
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'Approved': return <CheckCircle size={16} />;
+    case 'Completed': return <CheckCircle size={16} />;
     case 'Rejected': return <XCircle size={16} />;
     default: return <Clock size={16} />;
   }
@@ -53,8 +54,8 @@ export default function CustomerApplications() {
 
   // Initial mockup fallback if no apps exist
   const displayApps = applications.length > 0 ? applications : [
-    { id: 'APP1023', service: 'Community Certificate', date: 'Oct 24, 2023', status: 'Approved', daysLeft: 0, timeline: ['Submitted', 'Processing', 'Approved'] },
-    { id: 'APP1024', service: 'Income Certificate', date: 'Oct 26, 2023', status: 'Processing', daysLeft: 3, timeline: ['Submitted', 'Processing'] }
+    { id: 'APP1023', service: 'Community Certificate', date: 'Oct 24, 2023', status: 'Completed', daysLeft: 0, timeline: ['Submitted', 'Under Review', 'Processing', 'Completed'] },
+    { id: 'APP1024', service: 'Income Certificate', date: 'Oct 26, 2023', status: 'Processing', daysLeft: 3, timeline: ['Submitted', 'Under Review', 'Processing'] }
   ];
 
   if (loading && applications.length === 0) {
@@ -119,14 +120,16 @@ export default function CustomerApplications() {
             <div className="relative pt-4">
               <div className="absolute top-[28px] left-6 right-6 h-0.5 bg-border -z-10 hidden sm:block"></div>
               <div className="flex flex-col sm:flex-row justify-between gap-4">
-                {['Submitted', 'Processing', 'Approved'].map((step, i) => {
+                {['Submitted', 'Under Review', 'Processing', 'Completed'].map((step, i) => {
                   
                   const timeline = app.timeline || ['Submitted'];
                   let isCompleted = timeline.includes(step) && step !== app.status && app.status !== 'Rejected';
-                  if(app.status === 'Approved') isCompleted = true;
-
-                  const isCurrent = app.status === step || (step === 'Processing' && app.status === 'Under Review');
-                  const isRejected = step === 'Approved' && app.status === 'Rejected';
+                  if (app.status === 'Completed' || (app.status === 'Processing' && (step === 'Submitted' || step === 'Under Review')) || (app.status === 'Under Review' && step === 'Submitted')) {
+                    isCompleted = true;
+                  }
+                  
+                  const isCurrent = app.status === step || (app.timeline && app.timeline[app.timeline.length - 1] === step);
+                  const isRejected = step === 'Completed' && app.status === 'Rejected';
 
                   return (
                     <div key={i} className="flex sm:flex-col items-center gap-3 w-full max-w-[200px]">
