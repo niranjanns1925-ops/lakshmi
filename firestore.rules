@@ -13,7 +13,7 @@ service cloud.firestore {
     }
     
     function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : 'none';
     }
 
     function isCustomer() {
@@ -37,7 +37,7 @@ service cloud.firestore {
       // BUT they cannot set their own role to 'admin' or 'superadmin' via client
       allow create: if isSignedIn() && request.auth.uid == userId && 
                        (
-                         (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'customer') ||
+                         (!('role' in request.resource.data) || request.resource.data.role == 'customer') ||
                          (request.auth.token.email == 'niranjanns1925@gmail.com' && request.resource.data.role == 'superadmin')
                        );
                        

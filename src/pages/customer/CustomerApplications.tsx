@@ -117,38 +117,64 @@ export default function CustomerApplications() {
             )}
 
             {/* Timeline UI */}
-            <div className="relative pt-4">
-              <div className="absolute top-[28px] left-6 right-6 h-0.5 bg-border -z-10 hidden sm:block"></div>
-              <div className="flex flex-col sm:flex-row justify-between gap-4">
+            <div className="relative pt-6 pb-2">
+              <div className="absolute top-[38px] left-[10%] right-[10%] h-1 bg-secondary rounded-full hidden sm:block overflow-hidden">
+                <motion.div 
+                  className={`h-full ${app.status === 'Rejected' ? 'bg-red-500' : 'bg-primary'}`}
+                  initial={{ width: 0 }}
+                  animate={{ 
+                    width: app.status === 'Completed' ? '100%' : 
+                           app.status === 'Processing' ? '66%' : 
+                           app.status === 'Under Review' ? '33%' : 
+                           app.status === 'Rejected' ? '100%' : '0%' 
+                  }}
+                  transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
+                />
+              </div>
+              
+              <div className="flex flex-col sm:flex-row justify-between relative z-10 gap-6 sm:gap-0">
                 {['Submitted', 'Under Review', 'Processing', 'Completed'].map((step, i) => {
                   
-                  const timeline = app.timeline || ['Submitted'];
-                  let isCompleted = timeline.includes(step) && step !== app.status && app.status !== 'Rejected';
-                  if (app.status === 'Completed' || (app.status === 'Processing' && (step === 'Submitted' || step === 'Under Review')) || (app.status === 'Under Review' && step === 'Submitted')) {
-                    isCompleted = true;
-                  }
-                  
-                  const isCurrent = app.status === step || (app.timeline && app.timeline[app.timeline.length - 1] === step);
-                  const isRejected = step === 'Completed' && app.status === 'Rejected';
+                  const isCompleted = app.status === 'Completed' || 
+                    (app.status === 'Processing' && i < 2) || 
+                    (app.status === 'Under Review' && i < 1);
+                  const isCurrent = app.status === step;
+                  const isRejected = app.status === 'Rejected' && step === 'Completed';
 
                   return (
-                    <div key={i} className="flex sm:flex-col items-center gap-3 w-full max-w-[200px]">
-                      <div className={`
-                        w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors duration-300
-                        ${isCompleted ? 'bg-primary border-primary text-primary-foreground' : 
-                          isCurrent ? 'bg-background border-primary text-primary ring-4 ring-primary/20' : 
-                          isRejected ? 'bg-background border-red-300 text-red-300' :
-                          'bg-background border-border text-muted-foreground'}
-                      `}>
-                        {isCompleted ? <CheckCircle size={16} /> : 
-                         isRejected ? <XCircle size={16} /> : 
-                         <span className="text-xs font-bold">{i + 1}</span>}
-                      </div>
-                      <div className="text-sm font-medium whitespace-nowrap hidden sm:block">
-                        {isRejected ? 'Declined' : step}
-                      </div>
-                      <div className="text-sm font-medium whitespace-nowrap sm:hidden">
-                        {isRejected ? 'Declined' : step}
+                    <div key={i} className="flex sm:flex-col items-center gap-4 sm:gap-2 w-full sm:w-[120px] mx-auto text-center group">
+                      <motion.div 
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: isCurrent ? 1.1 : 1 }}
+                        className={`
+                          w-10 h-10 rounded-full flex items-center justify-center border-4 transition-colors duration-500 relative bg-background z-10
+                          ${isCompleted ? 'border-primary text-primary' : 
+                            isCurrent ? 'border-primary text-primary shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 
+                            isRejected ? 'border-red-500 text-red-500' :
+                            'border-secondary text-muted-foreground'}
+                        `}
+                      >
+                        {isCompleted ? <CheckCircle size={20} className="text-primary" /> : 
+                         isRejected ? <XCircle size={20} /> : 
+                         isCurrent ? <Clock size={20} className="animate-pulse" /> :
+                         <span className="text-sm font-bold">{i + 1}</span>}
+                      </motion.div>
+                      <div className="flex flex-col items-start sm:items-center">
+                        <div className={`text-sm font-bold whitespace-nowrap transition-colors duration-300
+                          ${isCurrent || isCompleted ? 'text-foreground' : isRejected ? 'text-red-500' : 'text-muted-foreground'}
+                        `}>
+                          {isRejected ? 'Declined' : step}
+                        </div>
+                        {isCurrent && (
+                          <div className="text-[10px] uppercase tracking-wider text-primary font-bold animate-pulse mt-0.5 hidden sm:block">
+                            Current
+                          </div>
+                        )}
+                        {!isCurrent && isCompleted && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">
+                            Done
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

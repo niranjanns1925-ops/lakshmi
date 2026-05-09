@@ -42,6 +42,8 @@ export default function Login() {
     } catch (err: any) {
       if (err.code === 'auth/configuration-not-found' || err.message?.includes('auth/configuration-not-found')) {
         setError('Google Sign-In is not enabled. Please enable the Google provider in your Firebase Authentication console.');
+      } else if (err.code === 'auth/unauthorized-domain' || err.message?.includes('auth/unauthorized-domain')) {
+        setError('This domain is not authorized for OAuth operations. Please add this app\'s URL to the Authorized Domains list in your Firebase Authentication settings.');
       } else {
         setError(err.message || 'Google Sign-In failed or was cancelled.');
       }

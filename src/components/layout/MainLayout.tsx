@@ -54,6 +54,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const customerLinks = [
     { name: 'Dashboard', path: '/customer/dashboard', icon: Home },
     { name: 'My Applications', path: '/customer/applications', icon: FileText },
+    { name: 'Settings', path: '/customer/settings', icon: Settings },
   ];
 
   const adminLinks = [

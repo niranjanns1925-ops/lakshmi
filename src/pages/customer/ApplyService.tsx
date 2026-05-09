@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, AlertCircle, CheckCircle, FileText, IndianRupee, Loader2 } from 'lucide-react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ApplyService() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  const [service, setService] = useState<any>(null);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileSuccess, setFileSuccess] = useState(false);
   const [desc, setDesc] = useState('');
@@ -17,34 +21,44 @@ export default function ApplyService() {
   const [progress, setProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
-  // Mock service data based on id, normally we'd fetch this
-  const serviceName = id === '1' ? 'Community Certificate' : 
-                      id === '2' ? 'Income Certificate' : 
-                      id === '3' ? 'Nativity Certificate' : 'Other Certificate';
-  const fee = 150;
-  
-  const service = {
-    name: serviceName,
-    fee: fee,
-    requiredDoc: 'Address Proof (PDF, JPG, PNG - Max 2MB)'
-  };
+  useEffect(() => {
+    if (!id) return;
+    const loadService = async () => {
+      try {
+        const docRef = doc(db, 'services', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setService({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setFileError("Service not found.");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingConfig(false);
+      }
+    };
+    loadService();
+  }, [id]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const processFile = (file: File) => {
     setFileError(null);
     setFileSuccess(false);
     setDownloadUrl(null);
 
-    const file = e.target.files?.[0];
-    if (!file) return;
+    // Use documentRules if available, else default to 2MB and basic formats
+    const rule = service?.documentRules?.[0]; 
+    const maxSizeMB = rule?.maxSizeMB || 2;
+    const formats = rule?.formats || ['pdf', 'jpg', 'png'];
 
-    if (file.size > 2 * 1024 * 1024) {
-      setFileError('File size exceeds 2MB limit.');
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      setFileError(`File size exceeds ${maxSizeMB}MB limit.`);
       return;
     }
 
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    const validTypes = formats.map((f: string) => f === 'jpg' ? ['image/jpeg', 'image/jpg'] : f === 'png' ? ['image/png'] : ['application/pdf']).flat();
     if (!validTypes.includes(file.type)) {
-      setFileError('Invalid file type. Only PDF, JPG, PNG are allowed.');
+      setFileError(`Invalid file type. Only ${formats.join(', ').toUpperCase()} are allowed.`);
       return;
     }
 
@@ -54,8 +68,6 @@ export default function ApplyService() {
     const storageRef = ref(storage, `documents/${user?.uid}/${Date.now()}_${file.name}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
-    // Simulate 5-7 second processing by artificially slowing down progress visually,
-    // though firebase might upload it faster. Let's combine actual upload with a delay.
     let simulatedProgress = 0;
     const interval = setInterval(() => {
       simulatedProgress += 2;
@@ -83,10 +95,41 @@ export default function ApplyService() {
               setFileSuccess(true);
               setDownloadUrl(url);
             }, 500);
-          }, 3000); // Add a 3 second delay to simulate scanning
+          }, 3000); // simulate scanning
         });
       }
     );
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (uploading) return;
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processFile(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,15 +139,14 @@ export default function ApplyService() {
       return;
     }
     
-    if (!user) return;
+    if (!user || !service) return;
 
     try {
-      // Create application
       await addDoc(collection(db, 'applications'), {
         userId: user.uid,
         userName: user.name,
         userEmail: user.email,
-        serviceId: id,
+        serviceId: service.id,
         serviceName: service.name,
         description: desc,
         documentUrl: downloadUrl,
@@ -121,6 +163,16 @@ export default function ApplyService() {
       setFileError('Failed to submit application: ' + err.message);
     }
   };
+
+  if (loadingConfig) {
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading service configuration...</div>;
+  }
+
+  if (!service) {
+    return <div className="p-8 text-center text-red-500 font-bold">Service configuration error.</div>;
+  }
+
+  const primaryRule = service.documentRules?.[0] || { name: 'Required Document', formats: ['pdf', 'jpg', 'png'], maxSizeMB: 2 };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in py-4">
@@ -149,18 +201,23 @@ export default function ApplyService() {
             <div className="space-y-3">
               <label className="text-sm font-medium flex justify-between">
                 <span>Upload Document</span>
-                <span className="text-muted-foreground text-xs">{service.requiredDoc}</span>
+                <span className="text-muted-foreground text-xs">{primaryRule.name} ({primaryRule.formats.join(', ').toUpperCase()} - Max {primaryRule.maxSizeMB}MB)</span>
               </label>
               
-              <div className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 overflow-hidden
-                ${fileError ? 'border-red-400 bg-red-400/5' : fileSuccess ? 'border-emerald-400 bg-emerald-400/5' : 'border-primary/30 hover:border-primary bg-primary/5'}
-              `}>
+              <div 
+                className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 overflow-hidden
+                  ${isDragging ? 'border-primary bg-primary/10 scale-[1.02]' : fileError ? 'border-red-400 bg-red-400/5' : fileSuccess ? 'border-emerald-400 bg-emerald-400/5' : 'border-primary/30 hover:border-primary bg-primary/5'}
+                `}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <input 
                   type="file" 
                   onChange={handleFileUpload}
                   disabled={uploading}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
-                  accept=".pdf, .jpg, .jpeg, .png"
+                  accept={primaryRule.formats.map((f: string) => f === 'jpg' ? '.jpg,.jpeg' : `.${f}`).join(',')}
                 />
                 
                 {/* Progress Bar Background */}
@@ -182,12 +239,12 @@ export default function ApplyService() {
                     <Upload className="text-primary mb-2" size={32} />
                   )}
                   
-                  <span className={`font-medium ${uploading ? 'text-primary' : fileError ? 'text-red-600' : fileSuccess ? 'text-emerald-600' : 'text-primary'}`}>
-                    {uploading ? `Processing... ${Math.round(progress)}%` : fileSuccess ? 'Document Ready' : fileError ? 'Upload Failed' : 'Click or drag file to upload'}
+                  <span className={`font-medium ${uploading ? 'text-primary' : fileError ? 'text-red-600' : fileSuccess ? 'text-emerald-600' : isDragging ? 'text-primary text-lg' : 'text-primary'}`}>
+                    {uploading ? `Processing... ${Math.round(progress)}%` : fileSuccess ? 'Document Ready' : fileError ? 'Upload Failed' : isDragging ? 'Drop file here' : 'Click or drag file to upload'}
                   </span>
                   
                   {!uploading && !fileSuccess && !fileError && (
-                    <span className="text-xs text-muted-foreground">Supported format: PDF, JPEG, PNG</span>
+                    <span className="text-xs text-muted-foreground">Supported format: {primaryRule.formats.join(', ').toUpperCase()}</span>
                   )}
                   
                   {fileSuccess && downloadUrl && (

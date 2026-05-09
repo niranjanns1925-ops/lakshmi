@@ -7,8 +7,10 @@ import Login from './pages/Login';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 import CustomerApplications from './pages/customer/CustomerApplications';
 import ApplyService from './pages/customer/ApplyService';
+import CustomerSettings from './pages/customer/CustomerSettings';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminApplications from './pages/admin/AdminApplications';
+import AdminServices from './pages/admin/AdminServices';
 
 import AdminStaff from './pages/admin/AdminStaff';
 
@@ -48,6 +50,7 @@ const MainRoutes = () => {
                 <Route path="dashboard" element={<CustomerDashboard />} />
                 <Route path="applications" element={<CustomerApplications />} />
                 <Route path="apply/:id" element={<ApplyService />} />
+                <Route path="settings" element={<CustomerSettings />} />
                 <Route path="*" element={<Navigate to="/customer/dashboard" replace />} />
               </Routes>
             </MainLayout>
@@ -60,7 +63,7 @@ const MainRoutes = () => {
               <Routes>
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="applications" element={<AdminApplications />} />
-                <Route path="services" element={<DummyPage title="Manage Services" />} />
+                <Route path="services" element={<AdminServices />} />
                 <Route path="staff" element={<AdminStaff />} />
                 <Route path="settings" element={<DummyPage title="Settings" />} />
                 <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />

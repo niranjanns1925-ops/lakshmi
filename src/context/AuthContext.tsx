@@ -48,7 +48,15 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       if (firebaseUser) {
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
-          const docSnap = await getDoc(docRef);
+          // Add a timeout to prevent hanging when offline
+          const getDocWithTimeout = (ref: any, timeoutMs: number) => {
+            return Promise.race([
+              getDoc(ref),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('client is offline (timeout)')), timeoutMs))
+            ]) as Promise<any>;
+          };
+
+          const docSnap = await getDocWithTimeout(docRef, 8000);
           
           if (docSnap.exists()) {
             const data = docSnap.data();
@@ -57,7 +65,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             // Promote to superadmin if matching email
             if (firebaseUser.email === 'niranjanns1925@gmail.com' && userRole !== 'superadmin') {
               userRole = 'superadmin';
-              await setDoc(docRef, { role: 'superadmin' }, { merge: true });
+              setDoc(docRef, { role: 'superadmin' }, { merge: true }).catch(e => console.warn("Background setDoc failed:", e));
             }
 
             setUser({
@@ -78,12 +86,25 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
               email: firebaseUser.email || '',
               role: userRole
             };
-            await setDoc(docRef, newUser);
+            setDoc(docRef, newUser).catch(e => console.warn("Background setDoc failed:", e));
             setUser(newUser);
           }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          setUser(null);
+        } catch (error: any) {
+          console.warn("Notice: Error fetching user data. Using fallback role.", error.message);
+          if (error.message?.includes('client is offline')) {
+            console.warn("Firebase is offline or slow. Check your database configuration or network.");
+          }
+          // If Firestore fails, still log them in with default role based on their email
+          let fallbackRole: UserRole = 'customer';
+          if (firebaseUser.email === 'niranjanns1925@gmail.com') {
+            fallbackRole = 'superadmin';
+          }
+          setUser({
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || 'User',
+            email: firebaseUser.email || '',
+            role: fallbackRole
+          });
         }
       } else {
         setUser(null);
@@ -120,12 +141,12 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
       if (email === 'niranjanns1925@gmail.com') {
         role = 'superadmin';
       }
-      await setDoc(doc(db, 'users', res.user.uid), {
+      setDoc(doc(db, 'users', res.user.uid), {
         uid: res.user.uid,
         name,
         email,
         role
-      });
+      }).catch(e => console.warn("Background setDoc failed:", e));
     } catch (error) {
       console.error("Email register error", error);
       throw error;

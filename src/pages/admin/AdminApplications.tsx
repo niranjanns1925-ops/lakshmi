@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, Timestamp } from 'firebase/firestore';
-import { CheckCircle, XCircle, FileText, Search, Clock, ExternalLink, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Search, Clock, ExternalLink, MessageSquare, Download } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function AdminApplications() {
@@ -100,6 +100,51 @@ export default function AdminApplications() {
     }
   };
 
+  const downloadExcel = () => {
+    if (applications.length === 0) return;
+
+    const headers = [
+      'Application ID',
+      'Applicant Name',
+      'Contact Info (Email)',
+      'Service',
+      'Status',
+      'Date Submitted',
+      'Admin Notes',
+      'User Notes',
+      'Document Uploaded',
+      'Document URL'
+    ];
+
+    const csvData = applications.map(app => [
+      app.id,
+      `"${(app.userName || 'N/A').replace(/"/g, '""')}"`,
+      `"${(app.userEmail || 'N/A').replace(/"/g, '""')}"`,
+      `"${(app.serviceName || 'Unknown Service').replace(/"/g, '""')}"`,
+      app.status,
+      app.createdAt ? new Date(app.createdAt.seconds * 1000).toLocaleString() : 'N/A',
+      `"${(app.adminNotes || '').replace(/"/g, '""')}"`,
+      `"${(app.description || '').replace(/"/g, '""')}"`,
+      app.documentUrl ? 'Yes' : 'No',
+      app.documentUrl || 'N/A'
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Applications_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredApps = filter === 'All' ? applications : applications.filter(a => a.status === filter);
 
   return (
@@ -112,16 +157,29 @@ export default function AdminApplications() {
           <p className="text-green-800/70 dark:text-green-200/70 mt-1">Real-time application tracking and processing dashboard</p>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          {['All', 'Submitted', 'Under Review', 'Processing', 'Completed', 'Rejected'].map(status => (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === status ? 'bg-[#4ade80] text-green-950 shadow-md' : 'bg-background hover:bg-[#eef8f2] border border-border/50 text-foreground'}`}
-            >
-              {status}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={downloadExcel}
+            disabled={applications.length === 0}
+            className="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 font-medium"
+          >
+            <Download size={18} />
+            Export to Excel (CSV)
+          </button>
+          
+          <div className="w-px h-8 bg-border hidden sm:block mx-2"></div>
+
+          <div className="flex flex-wrap gap-2">
+            {['All', 'Submitted', 'Under Review', 'Processing', 'Completed', 'Rejected'].map(status => (
+              <button
+                key={status}
+                onClick={() => setFilter(status)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === status ? 'bg-[#4ade80] text-green-950 shadow-md' : 'bg-background hover:bg-[#eef8f2] border border-border/50 text-foreground'}`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
