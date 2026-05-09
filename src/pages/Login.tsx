@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Mail, AlertCircle } from 'lucide-react';
 import Logo from '../components/Logo';
 
 export default function Login() {
-  const { loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
+  const { user, loading: authLoading, loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
   const navigate = useNavigate();
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
@@ -13,6 +13,16 @@ export default function Login() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(user.role === 'customer' ? '/customer/dashboard' : '/admin/dashboard', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-background"><div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div></div>;
+  }
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -28,21 +28,14 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   return <>{children}</>;
 };
 
-const AuthRedirect = () => {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (user) {
-    return <Navigate to={user.role === 'customer' ? '/customer/dashboard' : '/admin/dashboard'} replace />;
-  }
-  return <Login />;
-};
+// Auth logic moved to Login.tsx
 
 const MainRoutes = () => {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<AuthRedirect />} />
+        <Route path="/login" element={<Login />} />
         
         <Route path="/customer/*" element={
           <ProtectedRoute allowedRoles={['customer']}>
