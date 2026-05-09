@@ -50,7 +50,7 @@ service cloud.firestore {
 
     // Categories Collection
     match /categories/{categoryId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
@@ -61,8 +61,8 @@ service cloud.firestore {
     }
 
     match /services/{serviceId} {
-      // Anyone signed in can view services
-      allow read: if isSignedIn();
+      // Anyone can view services (for Landing Page)
+      allow read: if true;
       // Only admins can create/update/delete services
       allow write: if isAdmin();
     }

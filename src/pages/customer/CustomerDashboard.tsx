@@ -30,6 +30,7 @@ export default function CustomerDashboard() {
     const unsub = onSnapshot(q, (snapshot) => {
       const svcs: any[] = [];
       snapshot.forEach(doc => svcs.push({ id: doc.id, ...doc.data() }));
+      console.log('Fetched services:', svcs);
       setServices(svcs);
       setLoadingServices(false);
     }, (error) => {
@@ -51,7 +52,8 @@ export default function CustomerDashboard() {
   }, []);
 
   const filteredServices = services.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const sName = s.name || '';
+    const matchesSearch = sName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' ? true : s.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });

@@ -69,10 +69,12 @@ export default function AdminServices() {
       if (service.id) {
         // Update
         const { id, ...data } = service;
+        console.log("Updating service:", data);
         await updateDoc(doc(db, 'services', id), data as any);
       } else {
         // Create
         const { id, ...data } = service;
+        console.log("Creating service:", data);
         await addDoc(collection(db, 'services'), data);
       }
       setIsModalOpen(false);
@@ -144,13 +146,17 @@ export default function AdminServices() {
             </div>
           ))}
           <button 
-            onClick={async () => {
+            onClick={async (e) => {
+              const btn = e.currentTarget;
+              if (btn.disabled) return;
               const name = prompt('Enter new category name:');
               if (name?.trim()) {
+                btn.disabled = true;
                 await addDoc(collection(db, 'categories'), { name: name.trim() });
+                btn.disabled = false;
               }
             }}
-            className="flex items-center gap-1 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1 pb-1.5 rounded-lg transition-colors border border-primary/20"
+            className="flex items-center gap-1 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1 pb-1.5 rounded-lg transition-colors border border-primary/20 disabled:opacity-50"
           >
             <Plus size={14} /> Add Category
           </button>
@@ -263,8 +269,10 @@ function ServiceModal({ service, categories, onChange, onClose, onSave }: {
   categories: {id: string, name: string}[],
   onChange: (s: Service) => void,
   onClose: () => void, 
-  onSave: () => void 
+  onSave: () => Promise<void> 
 }) {
+  const [isSaving, setIsSaving] = useState(false);
+
   const addDocumentRule = () => {
     onChange({
       ...service,
@@ -507,16 +515,24 @@ function ServiceModal({ service, categories, onChange, onClose, onSave }: {
         <div className="sticky bottom-0 z-10 glass border-t border-border/50 p-4 px-6 flex justify-end gap-3 mt-auto">
           <button 
             onClick={onClose}
-            className="px-5 py-2 rounded-lg font-medium hover:bg-background transition-colors text-muted-foreground"
+            disabled={isSaving}
+            className="px-5 py-2 rounded-lg font-medium hover:bg-background transition-colors text-muted-foreground disabled:opacity-50"
           >
             Cancel
           </button>
           <button 
-            onClick={onSave}
-            disabled={!service.name.trim()}
+            onClick={async () => {
+              setIsSaving(true);
+              try {
+                await onSave();
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+            disabled={!service.name.trim() || isSaving}
             className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            <Check size={18} /> Save Configuration
+            <Check size={18} /> {isSaving ? 'Saving...' : 'Save Configuration'}
           </button>
         </div>
       </motion.div>

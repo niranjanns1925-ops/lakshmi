@@ -1,13 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { FileText, Clock, ArrowRight, Activity, Users, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { FileText, Clock, ArrowRight, Activity, Users, Settings, Search, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import Logo from '../components/Logo';
+import { db } from '../lib/firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const [showServices, setShowServices] = useState(false);
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchServices = async () => {
+    setLoading(true);
+    setShowServices(true);
+    try {
+      const q = query(collection(db, 'services'));
+      const snapshot = await getDocs(q);
+      const data: any[] = [];
+      snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
+      setServices(data);
+    } catch (err) {
+      console.error(err);
+      // Fallback or ignore if permissions fail
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">
@@ -93,7 +115,9 @@ export default function LandingPage() {
               >
                 Access Portal <ArrowRight size={20} />
               </button>
-              <button className="px-8 py-4 glass border border-border/50 text-foreground rounded-full font-bold text-lg hover:bg-black/5 dark:hover:bg-white/5 transition-all">
+              <button 
+                onClick={fetchServices}
+                className="px-8 py-4 glass border border-border/50 text-foreground rounded-full font-bold text-lg hover:bg-black/5 dark:hover:bg-white/5 transition-all">
                 View Services 📂
               </button>
             </motion.div>
@@ -163,6 +187,88 @@ export default function LandingPage() {
           ))}
         </motion.div>
       </main>
+
+      <AnimatePresence>
+        {showServices && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex justify-center items-end sm:items-center p-4 sm:p-6 bg-background/80 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ y: "100%" }} 
+              animate={{ y: 0 }} 
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="glass w-full max-w-4xl max-h-[85vh] h-full sm:h-auto rounded-t-3xl sm:rounded-3xl shadow-2xl border border-border/50 flex flex-col overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-border/50">
+                <div>
+                  <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Available Services</h2>
+                  <p className="text-sm text-muted-foreground mt-1">Discover what we offer before signing up.</p>
+                </div>
+                <button 
+                  onClick={() => setShowServices(false)}
+                  className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto flex-1">
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center h-48 space-y-4">
+                    <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                    <p className="text-muted-foreground">Loading services...</p>
+                  </div>
+                ) : services.length === 0 ? (
+                  <div className="text-center p-12 glass rounded-2xl border border-border/50">
+                    <Search size={48} className="mx-auto text-muted-foreground opacity-30 mb-4" />
+                    <h3 className="text-lg font-medium">No Services yet</h3>
+                    <p className="text-muted-foreground mt-2">The platform administrators are currently configuring the services.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {services.map(service => (
+                      <div key={service.id} className="bg-background/40 hover:bg-background/80 p-5 rounded-2xl border border-border/50 transition-all duration-300">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl shadow-sm border border-primary/20">
+                            {service.emoji}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg">{service.name}</h3>
+                            {service.category && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10 uppercase tracking-wider">{service.category}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm font-medium mt-auto">
+                          <div className="px-3 py-1.5 rounded-lg bg-background shadow-sm border border-border/50 flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs uppercase tracking-wider">Fee:</span> ₹{service.fee}
+                          </div>
+                          <div className="px-3 py-1.5 rounded-lg bg-background shadow-sm border border-border/50 flex items-center gap-2">
+                            <Clock size={14} className="text-muted-foreground" /> {service.days} Days
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-6 border-t border-border/50 bg-background/30 text-center">
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="px-8 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:shadow-lg transition-all"
+                >
+                  Create an account to apply
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
