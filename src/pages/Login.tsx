@@ -24,13 +24,10 @@ export default function Login() {
       } else {
         await loginWithEmail(email, password);
       }
-      // On success, AuthContext listener will pick up user and their role and App.tsx will navigate? 
-      // Since App.tsx routes rely on layout, we should navigate based on role if it was available.
-      // But we can just let App.tsx re-render, or we can just send to /customer/dashboard because the listener triggers.
-      // Actually, standard is to wait for auth state change to route automatically, but we can do a fallback here.
+      // On success, AuthRedirect will automatically navigate once auth state updates.
+      // We don't set loading to false here to keep the UI in a loading state until unmount.
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
-    } finally {
       setLoading(false);
     }
   };

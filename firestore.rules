@@ -77,7 +77,10 @@ service cloud.firestore {
       
       // Only Admins can update applications (e.g. status changes, adminNotes)
       // Exception: Customers might need to update to add missing docs if rejected.
-      allow update: if isAdmin() || (request.auth.uid == resource.data.userId && resource.data.status == 'Rejected' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['documents', 'status']));
+      // Exception 2: Customers updating after completing payment
+      allow update: if isAdmin() || 
+                       (request.auth.uid == resource.data.userId && resource.data.status == 'Rejected' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['documents', 'status'])) ||
+                       (request.auth.uid == resource.data.userId && resource.data.status == 'Pending Payment' && request.resource.data.status == 'Under Review');
       
       allow delete: if isAdmin();
     }

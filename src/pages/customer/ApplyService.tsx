@@ -184,7 +184,8 @@ export default function ApplyService() {
         });
         
         cashfree.checkout({
-          paymentSessionId: data.payment_session_id
+          paymentSessionId: data.payment_session_id,
+          redirectTarget: "_self"
         });
       } else {
         throw new Error(data.error || 'Payment initiation failed');

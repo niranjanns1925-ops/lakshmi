@@ -177,7 +177,8 @@ export default function CustomerApplications() {
                             mode: data.environment === 'PRODUCTION' ? "production" : "sandbox",
                           });
                           cashfree.checkout({
-                            paymentSessionId: data.payment_session_id
+                            paymentSessionId: data.payment_session_id,
+                            redirectTarget: "_self"
                           });
                         } else {
                           alert('Payment failed: ' + data.error);
