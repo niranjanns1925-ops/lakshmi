@@ -3,7 +3,8 @@ import { Clock, CheckCircle, XCircle, FileText, ChevronRight } from 'lucide-reac
 import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { useSearchParams } from 'react-router-dom';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -11,6 +12,7 @@ const getStatusColor = (status: string) => {
     case 'Processing': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
     case 'Under Review': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
     case 'Submitted': return 'text-purple-500 bg-purple-500/10 border-purple-500/20';
+    case 'Pending Payment': return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
     case 'Rejected': return 'text-red-500 bg-red-500/10 border-red-500/20';
     default: return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
   }
@@ -28,6 +30,32 @@ export default function CustomerApplications() {
   const { user } = useAuth();
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+
+  useEffect(() => {
+    // Handle payment success callback
+    const handlePaymentSuccess = async () => {
+      const paymentSuccess = searchParams.get('payment_success');
+      const appId = searchParams.get('application_id');
+      
+      if (paymentSuccess === 'true' && appId && user) {
+        setShowPaymentSuccess(true);
+        try {
+          await updateDoc(doc(db, 'applications', appId), {
+            status: 'Under Review',
+            timeline: ['Submitted', 'Under Review'] // Updates timeline removing pending
+          });
+          // Remove query params to prevent re-triggering
+          setSearchParams({}, { replace: true });
+          setTimeout(() => setShowPaymentSuccess(false), 5000);
+        } catch (error) {
+          console.error("Error updating paid application:", error);
+        }
+      }
+    };
+    handlePaymentSuccess();
+  }, [searchParams, user, setSearchParams]);
 
   useEffect(() => {
     if (!user) return;
@@ -71,6 +99,22 @@ export default function CustomerApplications() {
         <p className="text-muted-foreground mt-1">Track the status of your submitted requests</p>
       </div>
 
+      {showPaymentSuccess && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-500/10 border border-emerald-500/50 text-emerald-600 rounded-lg p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle size={20} />
+            <span className="font-medium">Payment Successful! Your application is now Under Review.</span>
+          </div>
+          <button onClick={() => setShowPaymentSuccess(false)}>
+            <XCircle size={18} className="opacity-50 hover:opacity-100" />
+          </button>
+        </motion.div>
+      )}
+
       <div className="space-y-4">
         {displayApps.map((app, index) => (
           <motion.div 
@@ -106,6 +150,46 @@ export default function CustomerApplications() {
                   <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md dark:bg-amber-900/30 dark:text-amber-400">
                     Est. {app.daysLeft || 3} days remaining
                   </span>
+                )}
+                {app.status === 'Pending Payment' && (
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/create-checkout-session', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            applicationId: app.id,
+                            serviceName: app.serviceName,
+                            fee: app.fee,
+                            userId: user?.uid,
+                            email: user?.email,
+                            phone: app.phone
+                          })
+                        });
+                        const data = await response.json();
+                        
+                        if (data.mockUrl) {
+                          window.location.href = data.mockUrl;
+                        } else if (data.payment_session_id) {
+                          const { load } = await import('@cashfreepayments/cashfree-js');
+                          const cashfree = await load({
+                            mode: data.environment === 'PRODUCTION' ? "production" : "sandbox",
+                          });
+                          cashfree.checkout({
+                            paymentSessionId: data.payment_session_id
+                          });
+                        } else {
+                          alert('Payment failed: ' + data.error);
+                        }
+                      } catch (e) {
+                        alert('Payment initiation failed.');
+                      }
+                    }}
+                    className="px-4 py-1.5 text-sm font-bold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
+                  >
+                    Pay Now (₹{app.fee})
+                  </button>
                 )}
               </div>
             </div>

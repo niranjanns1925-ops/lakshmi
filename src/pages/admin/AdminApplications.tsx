@@ -107,6 +107,7 @@ export default function AdminApplications() {
       'Application ID',
       'Applicant Name',
       'Contact Info (Email)',
+      'Phone Number',
       'Service',
       'Status',
       'Date Submitted',
@@ -120,6 +121,7 @@ export default function AdminApplications() {
       app.id,
       `"${(app.userName || 'N/A').replace(/"/g, '""')}"`,
       `"${(app.userEmail || 'N/A').replace(/"/g, '""')}"`,
+      `"${(app.phone || 'N/A').replace(/"/g, '""')}"`,
       `"${(app.serviceName || 'Unknown Service').replace(/"/g, '""')}"`,
       app.status,
       app.createdAt ? new Date(app.createdAt.seconds * 1000).toLocaleString() : 'N/A',
@@ -204,6 +206,7 @@ export default function AdminApplications() {
                 <div>
                   <h3 className="font-semibold text-lg">{app.serviceName || 'Unknown Service'}</h3>
                   <div className="text-sm font-medium mt-1">Applicant: {app.userName || 'N/A'} ({app.userEmail || 'N/A'})</div>
+                  {app.phone && <div className="text-sm font-medium mt-0.5">Phone: {app.phone}</div>}
                   <div className="text-sm text-muted-foreground mt-1">
                     ID: {app.id} • Submitted: {app.createdAt ? new Date(app.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
                   </div>

@@ -17,6 +17,7 @@ export default function ApplyService() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileSuccess, setFileSuccess] = useState(false);
   const [desc, setDesc] = useState('');
+  const [phone, setPhone] = useState('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -142,23 +143,53 @@ export default function ApplyService() {
     if (!user || !service) return;
 
     try {
-      await addDoc(collection(db, 'applications'), {
+      const appRef = await addDoc(collection(db, 'applications'), {
         userId: user.uid,
         userName: user.name,
         userEmail: user.email,
+        phone: phone,
         serviceId: service.id,
         serviceName: service.name,
         description: desc,
         documentUrl: downloadUrl,
-        status: 'Under Review',
-        timeline: ['Submitted', 'Under Review'],
+        status: 'Pending Payment',
+        timeline: ['Submitted'],
         fee: service.fee + 20,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
 
-      alert('Application submitted successfully!');
-      navigate('/customer/applications');
+      // Initiate Payment Request
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicationId: appRef.id,
+          serviceName: service.name,
+          fee: service.fee + 20,
+          userId: user.uid,
+          email: user.email,
+          phone: phone,
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.mockUrl) {
+        window.location.href = data.mockUrl;
+      } else if (data.payment_session_id) {
+        const { load } = await import('@cashfreepayments/cashfree-js');
+        const cashfree = await load({
+          mode: data.environment === 'PRODUCTION' ? "production" : "sandbox",
+        });
+        
+        cashfree.checkout({
+          paymentSessionId: data.payment_session_id
+        });
+      } else {
+        throw new Error(data.error || 'Payment initiation failed');
+      }
+
     } catch (err: any) {
       setFileError('Failed to submit application: ' + err.message);
     }
@@ -187,6 +218,18 @@ export default function ApplyService() {
         <div className="md:col-span-2 space-y-6">
           <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 space-y-6">
             
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Phone Number</label>
+              <input 
+                type="tel"
+                value={phone}
+                required
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+                className="w-full bg-background border border-border rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
             <div className="space-y-3">
               <label className="text-sm font-medium">Additional Information</label>
               <textarea 

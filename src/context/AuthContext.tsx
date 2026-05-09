@@ -12,11 +12,20 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export type UserRole = 'customer' | 'admin' | 'superadmin';
 
+export interface RolePermissions {
+  serviceManagement: boolean;
+  applicationApproval: boolean;
+  userManagement: boolean;
+  reportAccess: boolean;
+}
+
 export interface AppUser {
   uid: string;
   name: string;
   email: string;
   role: UserRole;
+  customRoleId?: string;
+  permissions?: RolePermissions;
 }
 
 interface AuthContextType {
@@ -62,17 +71,41 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const data = docSnap.data();
             let userRole = data.role || 'customer';
             
+            let permissions: RolePermissions | undefined = undefined;
+            if (data.customRoleId) {
+              try {
+                const roleSnap = await getDocWithTimeout(doc(db, 'roles', data.customRoleId), 5000);
+                if (roleSnap.exists()) {
+                  permissions = roleSnap.data().permissions;
+                }
+              } catch (e) {
+                console.warn("Failed to fetch custom role permissions", e);
+              }
+            }
+
             // Promote to superadmin if matching email
             if (firebaseUser.email === 'niranjanns1925@gmail.com' && userRole !== 'superadmin') {
               userRole = 'superadmin';
               setDoc(docRef, { role: 'superadmin' }, { merge: true }).catch(e => console.warn("Background setDoc failed:", e));
             }
 
+            // Superadmin has all permissions
+            if (userRole === 'superadmin') {
+              permissions = {
+                serviceManagement: true,
+                applicationApproval: true,
+                userManagement: true,
+                reportAccess: true
+              };
+            }
+
             setUser({
               uid: firebaseUser.uid,
               name: data.name || firebaseUser.displayName || 'User',
               email: firebaseUser.email || '',
-              role: userRole
+              role: userRole,
+              customRoleId: data.customRoleId,
+              permissions
             });
           } else {
             // Auto-create customer profile on first sign in (e.g. via Google)

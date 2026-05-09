@@ -48,7 +48,18 @@ service cloud.firestore {
                        (request.auth.token.email == 'niranjanns1925@gmail.com' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) && request.resource.data.role == 'superadmin');
     }
 
-    // Services Collection
+    // Categories Collection
+    match /categories/{categoryId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Roles Collection
+    match /roles/{roleId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
     match /services/{serviceId} {
       // Anyone signed in can view services
       allow read: if isSignedIn();

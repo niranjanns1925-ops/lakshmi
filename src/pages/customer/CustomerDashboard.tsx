@@ -20,6 +20,9 @@ export default function CustomerDashboard() {
   const navigate = useNavigate();
   const [lang, setLang] = useState<'EN' | 'TA'>('EN');
   const [services, setServices] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loadingServices, setLoadingServices] = useState(true);
 
   useEffect(() => {
@@ -29,9 +32,29 @@ export default function CustomerDashboard() {
       snapshot.forEach(doc => svcs.push({ id: doc.id, ...doc.data() }));
       setServices(svcs);
       setLoadingServices(false);
+    }, (error) => {
+      console.error("Error fetching services:", error);
+      setLoadingServices(false);
     });
-    return () => unsub();
+
+    const qCats = query(collection(db, 'categories'));
+    const unsubCats = onSnapshot(qCats, (snapshot) => {
+      const cats: any[] = [];
+      snapshot.forEach(doc => cats.push({ id: doc.id, ...doc.data() }));
+      setCategories(cats);
+    });
+
+    return () => {
+      unsub();
+      unsubCats();
+    };
   }, []);
+
+  const filteredServices = services.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' ? true : s.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -81,13 +104,30 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Search */}
-      <div className="glass p-2 rounded-xl flex items-center gap-3 border border-border/50 focus-within:border-primary/50 transition-colors">
-        <Search className="text-muted-foreground ml-3" size={20} />
-        <input 
-          type="text" 
-          placeholder={lang === 'EN' ? "Search for services (e.g. Income Certificate)" : "சேவைகளை தேடுக..."}
-          className="bg-transparent border-none outline-none flex-1 py-2 text-sm text-foreground placeholder:text-muted-foreground"
-        />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="glass p-2 rounded-xl flex-1 flex items-center gap-3 border border-border/50 focus-within:border-primary/50 transition-colors">
+          <Search className="text-muted-foreground ml-3" size={20} />
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder={lang === 'EN' ? "Search for services (e.g. Income Certificate)" : "சேவைகளை தேடுக..."}
+            className="bg-transparent border-none outline-none flex-1 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+        
+        {categories.length > 0 && (
+          <select 
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+            className="glass rounded-xl px-4 py-2 text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 bg-transparent min-w-[200px]"
+          >
+            <option value="All">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.name}>{cat.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -103,10 +143,10 @@ export default function CustomerDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {loadingServices ? (
               <div className="col-span-2 text-center text-muted-foreground p-8">Loading services...</div>
-            ) : services.length === 0 ? (
+            ) : filteredServices.length === 0 ? (
               <div className="col-span-2 text-center text-muted-foreground p-8">No services available.</div>
             ) : (
-              services.map(service => (
+              filteredServices.map(service => (
                 <div key={service.id} className="glass p-5 rounded-2xl flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative overflow-hidden group border border-border/50">
                   {service.popular && (
                     <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[10px] font-bold px-2 py-1 rounded-bl-lg flex items-center gap-1 z-10">

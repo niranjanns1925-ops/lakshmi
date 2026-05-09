@@ -19,19 +19,22 @@ interface Service {
   fee: number;
   days: number;
   popular: boolean;
+  category?: string;
   documentRules: DocumentRule[];
 }
 
 export default function AdminServices() {
   const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) return;
+    if (!user || (!['admin', 'superadmin'].includes(user.role as string))) return;
     
+    // Fetch Services
     const q = query(collection(db, 'services'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: Service[] = [];
@@ -40,9 +43,25 @@ export default function AdminServices() {
       });
       setServices(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching admin services:", error);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Fetch Categories
+    const qCats = query(collection(db, 'categories'));
+    const unsubCats = onSnapshot(qCats, (snapshot) => {
+      const cats: {id: string, name: string}[] = [];
+      snapshot.forEach(doc => {
+        cats.push({ id: doc.id, name: doc.data().name });
+      });
+      setCategories(cats);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubCats();
+    };
   }, [user]);
 
   const handleSaveService = async (service: Service) => {
@@ -83,6 +102,7 @@ export default function AdminServices() {
       fee: 0,
       days: 0,
       popular: false,
+      category: categories.length > 0 ? categories[0].name : '',
       documentRules: []
     });
     setIsModalOpen(true);
@@ -103,6 +123,38 @@ export default function AdminServices() {
         >
           <Plus size={18} /> Add New Service
         </button>
+      </div>
+
+      <div className="glass rounded-2xl p-6 border border-border/50">
+        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Service Categories</h3>
+        <div className="flex flex-wrap gap-2 items-center">
+          {categories.map(cat => (
+            <div key={cat.id} className="flex items-center gap-1 bg-background border rounded-lg px-3 py-1">
+              <span className="text-sm font-medium">{cat.name}</span>
+              <button 
+                onClick={async () => {
+                  if(confirm(`Delete category ${cat.name}?`)) {
+                    await deleteDoc(doc(db, 'categories', cat.id));
+                  }
+                }}
+                className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors ml-2"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          ))}
+          <button 
+            onClick={async () => {
+              const name = prompt('Enter new category name:');
+              if (name?.trim()) {
+                await addDoc(collection(db, 'categories'), { name: name.trim() });
+              }
+            }}
+            className="flex items-center gap-1 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1 pb-1.5 rounded-lg transition-colors border border-primary/20"
+          >
+            <Plus size={14} /> Add Category
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -131,6 +183,7 @@ export default function AdminServices() {
                     <div>
                       <h3 className="font-semibold text-lg">{service.name}</h3>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                        {service.category && <span className="font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20">{service.category}</span>}
                         <span className="font-medium px-2 py-0.5 rounded-full bg-background/50 border">₹{service.fee}</span>
                         <span className="font-medium px-2 py-0.5 rounded-full bg-background/50 border">{service.days} Days TAT</span>
                         {service.popular && <span className="font-medium text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-400/20">Popular</span>}
@@ -194,6 +247,7 @@ export default function AdminServices() {
         {isModalOpen && editingService && (
           <ServiceModal 
             service={editingService} 
+            categories={categories}
             onChange={setEditingService}
             onClose={() => setIsModalOpen(false)} 
             onSave={() => handleSaveService(editingService)} 
@@ -204,8 +258,9 @@ export default function AdminServices() {
   );
 }
 
-function ServiceModal({ service, onChange, onClose, onSave }: { 
+function ServiceModal({ service, categories, onChange, onClose, onSave }: { 
   service: Service, 
+  categories: {id: string, name: string}[],
   onChange: (s: Service) => void,
   onClose: () => void, 
   onSave: () => void 
@@ -303,6 +358,22 @@ function ServiceModal({ service, onChange, onClose, onSave }: {
                 </div>
               </div>
               
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-sm font-medium">Category</label>
+                <div className="flex gap-2">
+                  <select 
+                    value={service.category || ''} 
+                    onChange={e => onChange({...service, category: e.target.value})}
+                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value="">No Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-1.5 flex items-end">
                 <label className="flex items-center gap-2 cursor-pointer pb-2 text-sm font-medium">
                   <input 

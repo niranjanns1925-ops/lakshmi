@@ -25,14 +25,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     // Listen to real-time notifications for the current user
     const q = query(collection(db, 'notifications'), where('userId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
       notifs.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
         return timeB - timeA;
       });
       setNotifications(notifs);
-      setUnreadCount(notifs.filter(n => !n.read).length);
+      setUnreadCount(notifs.filter((n: any) => !n.read).length);
     });
 
     return () => unsubscribe();
@@ -57,13 +57,23 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { name: 'Settings', path: '/customer/settings', icon: Settings },
   ];
 
-  const adminLinks = [
+  const adminLinks: any[] = [
     { name: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'Applications', path: '/admin/applications', icon: FileText },
-    { name: 'Services', path: '/admin/services', icon: Activity },
-    ...(user.role === 'superadmin' || user.role === 'admin' ? [{ name: 'Staff', path: '/admin/staff', icon: Users }] : []),
-    { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
+
+  if (user.role === 'superadmin' || user.permissions?.applicationApproval) {
+    adminLinks.push({ name: 'Applications', path: '/admin/applications', icon: FileText });
+  }
+  if (user.role === 'superadmin' || user.permissions?.serviceManagement) {
+    adminLinks.push({ name: 'Services', path: '/admin/services', icon: Activity });
+  }
+  if (user.role === 'superadmin' || user.permissions?.userManagement) {
+    adminLinks.push({ name: 'Staff', path: '/admin/staff', icon: Users });
+  }
+  if (user.role === 'superadmin' || user.permissions?.reportAccess) {
+    // maybe add reports later, nothing right now for reports link, let's just make settings accessible to all admins
+  }
+  adminLinks.push({ name: 'Settings', path: '/admin/settings', icon: Settings });
 
   const links = user.role === 'customer' ? customerLinks : adminLinks;
 
